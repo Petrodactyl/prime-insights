@@ -2,9 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\SavePeopleToDatabase;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\Person;
+use App\Jobs\FetchPeopleJob;
 
 class FetchPeopleData extends Command
 {
@@ -27,20 +31,15 @@ class FetchPeopleData extends Command
      */
     public function handle()
     {
-        $response = Http::get('https://tech.primeinsights.net/api/people');
-        
-        if ($response->successful()) {
-            $data = $response->json();
+        // app('redis')->set('last job started', now());
+        Log::info("FetchPeopleData команда працює!");
 
-            foreach ($data as $personData) {
-                // Assuming 'id' is a unique identifier
-                Person::upsert($personData, ['id']);
-            }
+        $fetchJob = new FetchPeopleJob();
+        $saveJob = new SavePeopleToDatabase(); //TODO: rename job
 
-            $this->info('Data fetched and updated successfully.');
-        } else {
-            // Handle error
-            $this->error('Failed to fetch data from the API.');
-        }
+        Bus::chain([
+            $fetchJob,
+            $saveJob
+        ])->onQueue('default')->dispatch();
     }
 }

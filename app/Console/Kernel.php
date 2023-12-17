@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('telescope:prune --hours=12')->daily();
+        $schedule->command('app:fetch-people-data')->everySecond();
     }
 
     /**
