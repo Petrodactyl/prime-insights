@@ -46,7 +46,7 @@ class FetchPeopleJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("FetchPeopleJob джоба стартанула!");
+        // Log::info("FetchPeopleJob джоба стартанула!");
 
         // app('redis')->set('last job started', now());
 
@@ -56,7 +56,7 @@ class FetchPeopleJob implements ShouldQueue
         
 
         if ($response->successful()) {
-            Log::info("FetchPeopleJob успішно витягнула дані:", [substr($response->body(), 0, 100)]);
+            // Log::info("FetchPeopleJob успішно витягнула дані:", [substr($response->body(), 0, 100)]);
             // $this->data = '$response->json()';
             cache()->put("FetchPeopleJob-response", $response->json(), now()->addMinute());
         } else {

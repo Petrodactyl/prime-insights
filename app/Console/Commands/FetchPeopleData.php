@@ -13,7 +13,7 @@ use App\Jobs\FetchPeopleJob;
 
 class FetchPeopleData extends Command
 {
-    const MAX_JOB_IN_QUEUE = 10;
+    const MAX_JOB_IN_QUEUE = 2;
 
     /**
      * The name and signature of the console command.
@@ -38,13 +38,15 @@ class FetchPeopleData extends Command
 
         // Log::info("Зараз в default черзі: ", [Queue::size('default')]);
         
-        Log::info("Tecтанемо кеш: ");
+        // Log::info("Tecтанемо кеш: ");
         cache()->put("Test-Cache", 'data', now()->addMinutes(5));
+
+        // cache()->put('key', 'value', 60);
 
         if (Queue::size('fetch-people-queue') < self::MAX_JOB_IN_QUEUE) 
         {
-            Log::info("Зараз в fetch-people-queue черзі: ", [Queue::size('fetch-people-queue')]);
-            Log::info("FetchPeopleData команда працює!");
+            // Log::info("Зараз в fetch-people-queue черзі: ", [Queue::size('fetch-people-queue')]);
+            // Log::info("FetchPeopleData команда працює!");
 
             Bus::chain([
                 new FetchPeopleJob(), //TODO: rename job

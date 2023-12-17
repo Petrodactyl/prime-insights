@@ -8,7 +8,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\Person;
 
 class SavePeopleToDatabase implements ShouldQueue
@@ -49,12 +51,37 @@ class SavePeopleToDatabase implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("SavePeopleToDatabase!");
+        Log::info("SavePeopleToDatabase!!!!");
         $data = cache()->get("FetchPeopleJob-response");
-        Log::info("Дані, щойно з Редісу!!!!!!:", [count($data)]);   
-        // foreach ($this->data as $personData) {
-        //     // Assuming 'id' is a unique identifier
-        //     Person::upsert($personData, ['id']);
-        // }
+        Log::info("Дані, щойно з Редісу!!!!!!:", [count($data)]);
+
+        try {
+            DB::beginTransaction();
+            
+            // Person::truncate();
+            // Person::insert(json_decode($data, true));
+            Person::upsert($data, ['id']);
+        
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error("SavePeopleToDatabase зафейлилась:", [$e->getMessage()]);
+            
+            $this->fail();
+        }
+
+        Log::info("Дані (наче) успішно збереглися!");
     }
+
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping())->dontRelease()];
+    }
+    
 }
