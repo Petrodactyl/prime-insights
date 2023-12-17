@@ -7,11 +7,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use App\Models\Person;
 use App\Jobs\FetchPeopleJob;
 
 class FetchPeopleData extends Command
 {
+    const MAX_JOB_IN_QUEUE = 10;
+
     /**
      * The name and signature of the console command.
      *
@@ -32,14 +35,21 @@ class FetchPeopleData extends Command
     public function handle()
     {
         // app('redis')->set('last job started', now());
-        Log::info("FetchPeopleData команда працює!");
 
-        $fetchJob = new FetchPeopleJob();
-        $saveJob = new SavePeopleToDatabase(); //TODO: rename job
+        // Log::info("Зараз в default черзі: ", [Queue::size('default')]);
+        
+        Log::info("Tecтанемо кеш: ");
+        cache()->put("Test-Cache", 'data', now()->addMinutes(5));
 
-        Bus::chain([
-            $fetchJob,
-            $saveJob
-        ])->onQueue('default')->dispatch();
+        if (Queue::size('fetch-people-queue') < self::MAX_JOB_IN_QUEUE) 
+        {
+            Log::info("Зараз в fetch-people-queue черзі: ", [Queue::size('fetch-people-queue')]);
+            Log::info("FetchPeopleData команда працює!");
+
+            Bus::chain([
+                new FetchPeopleJob(), //TODO: rename job
+                new SavePeopleToDatabase()
+            ])->dispatch();
+        }
     }
 }

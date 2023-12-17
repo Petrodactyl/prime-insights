@@ -15,14 +15,33 @@ class SavePeopleToDatabase implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $data;
+    /**
+     * The maximum number of unhandled exceptions to allow before failing.
+     *
+     * @var int
+     */
+    public $maxExceptions = 1;
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 1;
+
+    /**
+     * Indicate if the job should be marked as failed on timeout.
+     *
+     * @var bool
+     */
+    public $failOnTimeout = true;
 
     /**
      * Create a new job instance.
      */
     public function __construct()
     {
-        // $this->data = $data;
+        $this->onQueue('save-people-queue');
     }
 
     /**
@@ -30,7 +49,9 @@ class SavePeopleToDatabase implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("SavePeopleToDatabase стартанула!", [gettype($this->data)]);
+        Log::info("SavePeopleToDatabase!");
+        $data = cache()->get("FetchPeopleJob-response");
+        Log::info("Дані, щойно з Редісу!!!!!!:", [count($data)]);   
         // foreach ($this->data as $personData) {
         //     // Assuming 'id' is a unique identifier
         //     Person::upsert($personData, ['id']);
