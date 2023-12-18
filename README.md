@@ -1,5 +1,11 @@
 # Prime Insights Test Demo
 
+## Prerequisites
+
+-   Docker
+-   Composer
+-   Laravel Sail
+
 ## Installation
 
 Git clone and then run a composer.
@@ -37,10 +43,18 @@ Look at `docker-compose.yml` for general Docker config. We need only two contain
 
 Then check the `docker\8.2\` folder. There you can find a config for Laravel Scheduler and Horizon along with the Dockerfile.
 
+## How to start
+
+Start Laravel Sail:
+
+```
+# sail up -d
+```
+
 ## Structure
 
 The business logic is distributed across three files: `app\Console\Commands\FetchPeopleData.php`, `app/Jobs/SendRequestToGetPeople.php` and `app/Jobs/SavePeopleToDatabase.php`.
 
 `FetchPeopleData.php` dispatches a Job Chain that consists of two jobs: the first one `SendRequestToGetPeople` runs in a `fetch-people-queue` and the second one in a `save-people-queue`.
 
-`FetchPeopleData.php` runs every second.
+`FetchPeopleData.php` is scheduled to run every second. All workers are controlled by Laravel Horizon which starts right after docker container is up. Also you can take a look at Supervisor config `docker\8.2\supervisord.conf` to see how Horizon is set up.
