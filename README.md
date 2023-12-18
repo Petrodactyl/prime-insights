@@ -8,14 +8,15 @@
 
 ## Installation
 
-Git clone and then run a composer.
+Git clone and then run a composer with key generation.
 
 ```
-composer install
+# composer install
+# php artisan key:generate
 ```
 
 Then create SQLite file `database\primeinsights.sqlite`.
-Afterwards run migrations with Artisan. Don't forget to set proper permissions for `storage` folder.
+Afterwards run migrations with Artisan **WITHIN CONTAINER** due to that `.env` `DB_DATABASE` setting expects _absolute path_ . Don't forget to set proper permissions for `storage` folder.
 
 ## Configuration
 
