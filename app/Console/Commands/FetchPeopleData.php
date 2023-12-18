@@ -5,15 +5,17 @@ namespace App\Console\Commands;
 use App\Jobs\SavePeopleToDatabase;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
-use App\Models\Person;
-use App\Jobs\FetchPeopleJob;
+use App\Jobs\SendRequestToGetPeople;
 
 class FetchPeopleData extends Command
 {
-    const MAX_JOB_IN_QUEUE = 2;
+    /**
+     * Maximum number of jobs in a 'fetch-people-queue' queue
+     *
+     * @var int
+     */
+    const MAX_JOB_IN_QUEUE = 5;
 
     /**
      * The name and signature of the console command.
@@ -34,23 +36,12 @@ class FetchPeopleData extends Command
      */
     public function handle()
     {
-        // app('redis')->set('last job started', now());
-
-        // Log::info("Зараз в default черзі: ", [Queue::size('default')]);
-        
-        // Log::info("Tecтанемо кеш: ");
-        cache()->put("Test-Cache", 'data', now()->addMinutes(5));
-
-        // cache()->put('key', 'value', 60);
-
+        // prevent dispatching a new job chain if there are already allowed number of jobs in progress
         if (Queue::size('fetch-people-queue') < self::MAX_JOB_IN_QUEUE) 
         {
-            // Log::info("Зараз в fetch-people-queue черзі: ", [Queue::size('fetch-people-queue')]);
-            // Log::info("FetchPeopleData команда працює!");
-
             Bus::chain([
-                new FetchPeopleJob(), //TODO: rename job
-                new SavePeopleToDatabase()
+                new SendRequestToGetPeople,
+                new SavePeopleToDatabase
             ])->dispatch();
         }
     }

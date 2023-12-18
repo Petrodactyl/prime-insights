@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -39,7 +38,7 @@ class SavePeopleToDatabase implements ShouldQueue
     public $failOnTimeout = true;
 
     /**
-     * Create a new job instance.
+     * Create a new job instance on a 'save-people-queue'
      */
     public function __construct()
     {
@@ -51,27 +50,42 @@ class SavePeopleToDatabase implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("SavePeopleToDatabase!!!!");
-        $data = cache()->get("FetchPeopleJob-response");
-        Log::info("Дані, щойно з Редісу!!!!!!:", [count($data)]);
-
         try {
+            // get data received from API endpoint
+            $data = cache()->get("People-Data");
+
+            if (empty($data)) 
+            {
+                Log::warning("Data returned from API are empty!");
+
+                return;
+            }
+
+            // collect IDs for sync purpose
+            $fetchedPeople = collect($data);
+            $fetchedIds = $fetchedPeople->pluck('id');
+
+            // perform all database-related operations within a transaction
             DB::beginTransaction();
+
+            // Delete records not present in the fetched data
+            Person::whereNotIn('id', $fetchedIds)->delete();
             
-            // Person::truncate();
-            // Person::insert(json_decode($data, true));
+            // Insert new or update existing records
             Person::upsert($data, ['id']);
         
             DB::commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // rollback transaction and fail the job
             DB::rollBack();
 
-            Log::error("SavePeopleToDatabase зафейлилась:", [$e->getMessage()]);
+            Log::error("An exception occurred while saving People data to a storage:", [$e->getMessage()]);
             
             $this->fail();
         }
 
-        Log::info("Дані (наче) успішно збереглися!");
+        // save last successfull sync date and time for debug purposes
+        cache()->put("Last Successful Sync", now()->toDateTimeString(), now()->addMinutes(5));
     }
 
     /**
@@ -81,6 +95,7 @@ class SavePeopleToDatabase implements ShouldQueue
      */
     public function middleware(): array
     {
+        // use WithoutOverlapping middleware because there should be one job at a time accessing SQLite database
         return [(new WithoutOverlapping())->dontRelease()];
     }
     

@@ -11,7 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class FetchPeopleJob implements ShouldQueue
+class SendRequestToGetPeople implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -36,6 +36,9 @@ class FetchPeopleJob implements ShouldQueue
      */
     public $failOnTimeout = true;
 
+    /**
+     * Create a new job instance on a 'fetch-people-queue'
+     */
     public function __construct() 
     {
         $this->onQueue('fetch-people-queue');
@@ -46,23 +49,30 @@ class FetchPeopleJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // Log::info("FetchPeopleJob джоба стартанула!");
+        try 
+        {
+            // Send Request
+            $response = Http::get('https://tech.primeinsights.net/api/people');
 
-        // app('redis')->set('last job started', now());
+            if ($response->successful()) 
+            {
+                // no need to store this data more than a minute
+                cache()->put("People-Data", $response->json(), now()->addMinute());
+            } 
+            else 
+            {
+                // Handle error
+                throw new \Exception($response->reason());
+            }
+        } 
+        catch (\Throwable $e) 
+        {
+            Log::error("An exception occurred while sending request to fetch People: " . $e->getMessage());
+            // Include the stack trace
+            Log::error($e->getTraceAsString());
 
-        $response = Http::get('https://tech.primeinsights.net/api/people');
-
-        // Log::info("FetchPeopleJob витягнула дані:", [$response->body()]);
-        
-
-        if ($response->successful()) {
-            // Log::info("FetchPeopleJob успішно витягнула дані:", [substr($response->body(), 0, 100)]);
-            // $this->data = '$response->json()';
-            cache()->put("FetchPeopleJob-response", $response->json(), now()->addMinute());
-        } else {
-            // Handle error
-            Log::error("FetchPeopleJob зафейлилась:", [$response->reason()]);
-            $this->fail($response->reason());
+            // Mark the job as failed
+            $this->fail($e);
         }
     }
 }
